@@ -1,6 +1,7 @@
 package appDomain;
 
 import java.util.Comparator;
+import java.util.Locale;
 
 import products.Product;
 import products.OriginalPriceComparator;
@@ -45,7 +46,8 @@ public class AppDriver
                             "Invalid argument: " + argument);
                 }
 
-                char option = Character.toLowerCase(argument.charAt(1));
+                char option =
+                        Character.toLowerCase(argument.charAt(1));
                 String value = argument.substring(2);
 
                 switch (option)
@@ -81,8 +83,7 @@ public class AppDriver
                                     "Comparison must be o, u, or d.");
                         }
 
-                        compareType =
-                                value.toLowerCase(java.util.Locale.ROOT);
+                        compareType = value.toLowerCase(Locale.ROOT);
                         break;
 
                     case 's':
@@ -101,8 +102,7 @@ public class AppDriver
                                     "Sort must be b, s, i, m, q, or z.");
                         }
 
-                        sortType =
-                                value.toLowerCase(java.util.Locale.ROOT);
+                        sortType = value.toLowerCase(Locale.ROOT);
                         break;
 
                     default:
@@ -111,7 +111,8 @@ public class AppDriver
                 }
             }
 
-            if (fileName == null || compareType == null || sortType == null)
+            if (fileName == null || compareType == null
+                    || sortType == null)
             {
                 throw new IllegalArgumentException(
                         "Provide all three options: -f, -t, and -s.");
@@ -140,37 +141,44 @@ public class AppDriver
 
             // Choose the sorting operation before starting the timer.
             Runnable sortingTask;
+            String algorithmName;
 
             switch (sortType)
             {
                 case "b":
                     sortingTask =
                             () -> Sorter.bubbleSort(products, comparator);
+                    algorithmName = "Bubble Sort";
                     break;
 
                 case "s":
                     sortingTask =
                             () -> Sorter.selectionSort(products, comparator);
+                    algorithmName = "Selection Sort";
                     break;
 
                 case "i":
                     sortingTask =
                             () -> InsertionSort.sort(products, comparator);
+                    algorithmName = "Insertion Sort";
                     break;
 
                 case "m":
                     sortingTask =
                             () -> MergeSort.sort(products, comparator);
+                    algorithmName = "Merge Sort";
                     break;
 
                 case "q":
                     sortingTask =
                             () -> QuickSort.sort(products, comparator);
+                    algorithmName = "Quick Sort";
                     break;
 
                 case "z":
                     sortingTask =
                             () -> HeapSort.heapSort(products, comparator);
+                    algorithmName = "Heap Sort";
                     break;
 
                 default:
@@ -178,19 +186,17 @@ public class AppDriver
                             "Invalid sorting algorithm.");
             }
 
+            // Measure only the sorting operation.
             long start = System.nanoTime();
             sortingTask.run();
             long end = System.nanoTime();
 
-            double milliseconds = (end - start) / 1_000_000.0;
+            long milliseconds = (end - start) / 1_000_000L;
 
-            System.out.println("File: " + fileName);
-            System.out.println("Comparison: " + compareType);
-            System.out.println("Sorting algorithm: " + sortType);
-            System.out.println("Products: " + products.length);
-            System.out.printf("Sorting time: %.3f ms%n", milliseconds);
+            displayProducts(products, compareType);
 
-            displayProducts(products);
+            System.out.println(algorithmName + " run time was: "
+                    + milliseconds + " milliseconds");
         }
         catch (IllegalArgumentException e)
         {
@@ -205,11 +211,14 @@ public class AppDriver
     }
 
     /**
-     * Displays all small collections, or selected positions in larger ones.
+     * Displays all products for small arrays, or the required positions
+     * for larger arrays.
      *
      * @param products the sorted product array
+     * @param compareType the selected comparison type: o, u, or d
      */
-    private static void displayProducts(Product[] products)
+    private static void displayProducts(
+            Product[] products, String compareType)
     {
         int count = products.length;
 
@@ -219,29 +228,100 @@ public class AppDriver
             return;
         }
 
-        System.out.println("\nSorted products:");
-
         if (count <= 10)
         {
             for (int i = 0; i < count; i++)
             {
-                System.out.println((i + 1) + ": " + products[i]);
+                int position = i + 1;
+                String suffix;
+
+                switch (position)
+                {
+                    case 1:
+                        suffix = "st";
+                        break;
+
+                    case 2:
+                        suffix = "nd";
+                        break;
+
+                    case 3:
+                        suffix = "rd";
+                        break;
+
+                    default:
+                        suffix = "th";
+                        break;
+                }
+
+                printProduct(
+                        position + "-" + suffix + " element:",
+                        products[i],
+                        compareType);
             }
+
             return;
         }
 
+        printProduct(
+                "First element is:",
+                products[0],
+                compareType);
+
         int interval = count <= 1000 ? 100 : 1000;
 
-        System.out.println("1: " + products[0]);
-
-        // Positions 100, 200, ... or 1000, 2000, ...
         for (int position = interval; position < count;
                 position += interval)
         {
-            System.out.println(
-                    position + ": " + products[position - 1]);
+            printProduct(
+                    position + "-th element:",
+                    products[position - 1],
+                    compareType);
         }
 
-        System.out.println(count + ": " + products[count - 1]);
+        printProduct(
+                "Last element is:",
+                products[count - 1],
+                compareType);
+    }
+
+    /**
+     * Prints a product's type and the selected comparison value.
+     *
+     * @param label the position label
+     * @param product the product to display
+     * @param compareType the selected comparison type: o, u, or d
+     */
+    private static void printProduct(
+            String label, Product product, String compareType)
+    {
+        String valueName;
+        double value;
+
+        switch (compareType)
+        {
+            case "o":
+                valueName = "Original Price:";
+                value = product.getOriginalPrice();
+                break;
+
+            case "u":
+                valueName = "Updated Price:";
+                value = product.getUpdatedPrice();
+                break;
+
+            default:
+                valueName = "Calculated Difference:";
+                value = product.calcRealDiff();
+                break;
+        }
+
+        System.out.printf(
+                Locale.ROOT,
+                "%-22s %-22s %s %s%n",
+                label,
+                product.getClass().getName(),
+                valueName,
+                value);
     }
 }
